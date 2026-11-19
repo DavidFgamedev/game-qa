@@ -1,0 +1,20 @@
+{
+  "name": "game-qa",
+  "version": "1.0.0",
+  "description": "Automated QA for generated browser games: static source checks with zero dependencies, plus Playwright checks for the things static analysis cannot decide.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "bin": { "game-qa": "./bin/game-qa.mjs" },
+  "scripts": {
+    "qa:static": "node bin/game-qa.mjs static",
+    "qa:browser": "node bin/game-qa.mjs browser",
+    "qa": "node bin/game-qa.mjs all",
+    "test": "node --test test/*.test.mjs",
+    "test:static": "node --test test/static.test.mjs test/cli.test.mjs",
+    "test:browser": "node --test test/browser.test.mjs"
+  },
+  "devDependencies": { "playwright": "^1.49.0" },
+  "files": ["bin", "src", "README.md", "LICENSE"],
+  "keywords": ["qa", "testing", "playwright", "e2e", "browser-testing", "games", "ci", "automation"]
+}

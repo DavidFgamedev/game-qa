@@ -1,0 +1,3 @@
+{ "games": [
+  { "name": "broken-data-uri", "root": "test/fixtures/games/broken-data-uri", "entry": "test/fixtures/games/broken-data-uri/index.html", "platforms": ["web"] }
+] }

@@ -1,0 +1,61 @@
+name: qa
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  static:
+    name: static suite (no dependencies, node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      # No install. The static half uses Node built-ins only, which is the property
+      # that keeps it runnable in any pipeline without a dependency budget.
+      - name: Static check tests
+        run: node --test test/static.test.mjs test/cli.test.mjs
+      - name: Static checks against the real games
+        run: node bin/game-qa.mjs static
+
+  browser:
+    name: browser suite (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci || npm install
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: node --test test/browser.test.mjs
+
+  self-check:
+    name: the failing fixtures really do fail
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # A checker that cannot fail is not a checker. If a change quietly defeats a
+      # blocker, this job goes red instead of the suite going green.
+      - name: a known-bad game must exit 1
+        run: |
+          if node bin/game-qa.mjs static --config test/fixtures/configs/static-fail.json > /dev/null 2>&1; then
+            echo "::error::static suite passed a game with a data: URI blocker"
+            exit 1
+          fi
+          echo "ok: static suite correctly failed the broken fixture"
+      - name: a known-good game must exit 0
+        run: node bin/game-qa.mjs static --config test/fixtures/configs/static-pass.json

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chibi Bounce - Endless Runner</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #FFB6C1, #E6E6FA, #B0E0E6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Comic Sans MS', cursive;
+        }
+        canvas {
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        #gameContainer {
+            text-align: center;
+        }
+        .game-title {
+            color: #FF69B4;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1 class="game-title">Chibi Bounce</h1>
+        <div id="game"></div>
+    </div>
+
+    <script>
+        class GameScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'GameScene' });
+            }
+
+            init() {
+                this.gameSpeed = 200;
+                this.lives = 3;
+                this.score = 0;
+                this.highScore = localStorage.getItem('chibiHighScore') || 0;
+                this.gameTime = 0;
+                this.invulnerable = false;
+                this.obstacles = null;
+                this.coins = null;
+                this.particles = null;
+                this.gameStarted = false;
+            }
+
+            preload() {
+                // No data URIs needed - we'll create everything with Graphics objects
+            }
+
+            create() {
+                // Create background gradient
+                const gradient = this.add.graphics();
+                gradient.fillGradientStyle(0xFFE4E1, 0xFFE4E1, 0xE0E6FF, 0xE0E6FF, 1);
+                gradient.fillRect(0, 0, 800, 600);
+
+                // Create ground texture using Graphics
+                const groundGraphics = this.add.graphics();
+                groundGraphics.fillStyle(0x90EE90);
+                groundGraphics.fillRect(0, 0, 800, 50);
+                groundGraphics.generateTexture('ground', 800, 50);
+                groundGraphics.destroy();
+
+                // Create chibi character texture using Graphics
+                const chibiGraphics = this.add.graphics();
+                chibiGraphics.fillStyle(0xFFB6C1);
+                chibiGraphics.fillRoundedRect(0, 0, 40, 40, 8);
+                chibiGraphics.fillStyle(0x000000);
+                chibiGraphics.fillCircle(12, 15, 3); // left eye
+                chibiGraphics.fillCircle(28, 15, 3); // right eye
+                chibiGraphics.fillStyle(0xFF69B4);
+                chibiGraphics.fillEllipse(20, 25, 8, 4); // mouth
+                chibiGraphics.generateTexture('chibi', 40, 40);
+                chibiGraphics.destroy();
+
+                // Create obstacle texture using Graphics
+                const obstacleGraphics = this.add.graphics();
+                obstacleGraphics.fillStyle(0xFF6B6B);
+                obstacleGraphics.beginPath();
+                obstacleGraphics.moveTo(15, 0);
+                obstacleGraphics.lineTo(0, 40);
+                obstacleGraphics.lineTo(30, 40);
+                obstacleGraphics.closePath();
+                obstacleGraphics.fill();
+                obstacleGraphics.generateTexture('obstacle', 30, 40);
+                obstacleGraphics.destroy();
+
+                // Create coin texture using Graphics
+                const coinGraphics = this.add.graphics();
+                coinGraphics.fillStyle(0xFFD700);
+                coinGraphics.fillCircle(15, 15, 12);
+                coinGraphics.fillStyle(0xFFA500);
+                coinGraphics.fillCircle(15, 15, 8);
+                coinGraphics.generateTexture('coin', 30, 30);
+                coinGraphics.destroy();
+
+                // Create particle texture using Graphics
+                const particleGraphics = this.add.graphics();
+                particleGraphics.fillStyle(0xFFD700);
+                particleGraphics.fillCircle(2, 2, 2);
+                particleGraphics.generateTexture('particle', 4, 4);
+                particleGraphics.destroy();
+
+                // Create ground
+                this.ground = this.add.tileSprite(0, 550, 800, 50, 'ground');
+                this.physics.add.existing(this.ground, true);
+
+                // Create player
+                this.player = this.physics.add.sprite(100, 500, 'chibi');
+                this.player.setCollideWorldBounds(true);
+                this.player.setBounce(0.2);
+                this.player.body.setSize(35, 35);
+                this.player.setScale(1.2); // Make character slightly larger
+
+                // Create groups
+                this.obstacles = this.physics.add.group();
+                this.coins = this.physics.add.group();
+
+                // Create particle system
+                this.particles = this.add.particles(0, 0, 'particle');
+
+                // Physics collisions
+                this.physics.add.collider(this.player, this.ground);
+                this.physics.add.overlap(this.player, this.obstacles, this.hitObstacle, null, this);
+                this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
+
+                // UI
+                this.scoreText = this.add.text(16, 16, 'Score: 0', { 
+                    fontSize: '24px', 
+                    fill: '#FF69B4',
+                    fontFamily: 'Comic Sans MS',
+                    stroke: '#FFFFFF',
+                    strokeThickness: 3
+                });
+                
+                this.livesText = this.add.text(16, 50, 'Lives: ♥♥♥', { 
+                    fontSize: '24px', 
+                    fill: '#FF1493',
+                    fontFamily: 'Comic Sans MS',
+                    stroke: '#FFFFFF',
+                    strokeThickness: 3
+                });
+                
+                this.highScoreText = this.add.text(550, 16, `High Score: ${this.highScore}`, { 
+                    fontSize: '20px', 
+                    fill: '#9370DB',
+                    fontFamily: 'Comic Sans MS',
+                    stroke: '#FFFFFF',
+                    strokeThickness: 2
+                });
+
+                // Instructions text
+                this.instructionsText = this.add.text(400, 150, 'Tap or Press SPACE to Jump!\nGame starts automatically!', {
+                    fontSize: '18px',
+                    fill: '#FF69B4',
+                    fontFamily: 'Comic Sans MS',
+                    stroke: '#FFFFFF',
+                    strokeThickness: 2,
+                    align: 'center'
+                }).setOrigin(0.5);
+
+                // Make instructions fade out after 5 seconds
+                this.time.delayedCall(5000, () => {
+                    this.tweens.add({
+                        targets: this.instructionsText,
+                        alpha: 0,
+                        duration: 1000,
+                        onComplete: () => this.instructionsText.destroy()
+                    });
+                });
+
+                // Controls
+                this.cursors = this.input.keyboard.createCursorKeys();
+                this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+                this.input.on('pointerdown', this.jump, this);
+
+                // Auto-start game after 1 second
+                this.time.delayedCall(1000, () => {
+                    this.gameStarted = true;
+                    console.log('Game started!');
+                });
+
+                // Timers - start immediately
+                this.obstacleTimer = this.time.addEvent({
+                    delay: 3000,
+                    callback: this.addObstacle,
+                    callbackScope: this,
+                    loop: true
+                });
+
+                this.coinTimer = this.time.addEvent({
+                    delay: 4000,
+                    callback: this.addCoin,
+                    callbackScope: this,
+                    loop: true
+                });
+
+                // Difficulty scaling timer
+                this.difficultyTimer = this.time.addEvent({
+                    delay: 30000,
+                    callback: this.increaseDifficulty,
+                    callbackScope: this,
+                    loop: true
+                });
+
+                // Game over overlay (hidden initially)
+                this.gameOverGroup = this.add.group();
+                const gameOverBg = this.add.rectangle(400, 300, 500, 250, 0x000000, 0.9);
+                const gameOverText = this.add.text(400, 250, 'Game Over!', {
+                    fontSize: '36px',
+                    fill: '#FF69B4',
+                    fontFamily: 'Comic Sans MS'
+                }).setOrigin(0.5);
+                
+                const finalScoreText = this.add.text(400, 300, '', {
+                    fontSize: '20px',
+                    fill: '#FFFFFF',
+                    fontFamily: 'Comic Sans MS'
+                }).setOrigin(0.5);
+
+                const restartText = this.add.text(400, 340, 'Tap or Press SPACE to restart', {
+                    fontSize: '18px',
+                    fill: '#FFFFFF',
+                    fontFamily: 'Comic Sans MS'
+                }).setOrigin(0.5);
+
+                this.gameOverGroup.addMultiple([gameOverBg, gameOverText, finalScoreText, restartText]);
+                this.gameOverGroup.setVisible(false);
+                this.finalScoreText = finalScoreText; // Store reference
+            }
+
+            update(time, delta) {
+                if (!this.gameStarted || this.lives <= 0) return;
+
+                this.gameTime += delta;
+
+                // Move ground
+                this.ground.tilePositionX += this.gameSpeed * (delta / 1000);
+
+                // Auto-run player (keep in position)
+                this.player.x = Phaser.Math.Clamp(this.player.x, 80, 120);
+
+                // Move obstacles and coins
+                this.obstacles.children.entries.forEach(obstacle => {
+                    obstacle.x -= this.gameSpeed * (delta / 1000);
+                    if (obstacle.x < -50) {
+                        obstacle.destroy();
+                    }
+                });
+
+                this.coins.children.entries.forEach(coin => {
+                    coin.x -= this.gameSpeed * (delta / 1000);
+                    coin.rotation += 0.05;
+                    if (coin.x < -50) {
+                        coin.destroy();
+                    }
+                });
+
+                // Jump controls - Fixed to be more responsive
+                if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || 
+                    Phaser.Input.Keyboard.JustDown(this.cursors.up)) {
+                    this.jump();
+                }
+
+                // Update score - Fixed to increment properly
+                const scoreIncrement = Math.floor(this.gameSpeed * (delta / 5000)); // Increased increment rate
+                this.score += scoreIncrement;
+                this.scoreText.setText('Score: ' + this.score);
+                
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    this.highScoreText.setText('High Score: ' + this.highScore);
+                }
+            }
+
+            jump() {
+                // Fixed jump mechanics with better physics and visual feedback
+                if (this.player.body.touching.down && this.lives > 0 && this.gameStarted) {
+                    this.player.setVelocityY(-600); // Increased jump power
+                    
+                    // Visual feedback - jump effect
+                    this.tweens.add({
+                        targets: this.player,
+                        scaleX: 0.9,
+                        scaleY: 1.3,
+                        duration: 100,
+                        yoyo: true,
+                        ease: 'Power2'
+                    });
+                    
+                    // Screen shake effect
+                    this.cameras.main.shake(100, 0.005);
+                    
+                    console.log('Jump!'); // Debug log
+                }
+            }
+
+            addObstacle() {
+                if (this.lives <= 0 || !this.gameStarted) return;
+                
+                const obstacle = this.obstacles.create(850, 510, 'obstacle');
+                obstacle.setVelocityX(-this.gameSpeed);
+                obstacle.body.setSize(25, 35);
+                obstacle.setScale(1.2); // Make obstacles more visible
+            }
+
+            addCoin() {
+                if (this.lives <= 0 || !this.gameStarted) return;
+                
+                const coinY = Phaser.Math.Between(350, 450);
+                const coin = this.coins.create(850, coinY, 'coin');
+                coin.setVelocityX(-this.gameSpeed);
+                coin.body.setSize(25, 25);
+                coin.setScale(1.2); // Make coins more visible
+                
+                // Add spinning animation
+                this.tweens.add({
+                    targets: coin,
+                    rotation: Math.PI * 2,
+                    duration: 2000,
+                    repeat: -1
+                });
+            }
+
+            hitObstacle(player, obstacle) {
+                if (this.invulnerable) return;
+
+                this.lives--;
+                this.invulnerable = true;
+                
+                // Screen shake on hit
+                this.cameras.main.shake(400, 0.02);
+                
+                // Make player flash red and bounce
+                this.tweens.add({
+                    targets: player,
+                    alpha: 0.3,
+                    tint: 0xFF0000,
+                    duration: 150,
+                    yoyo: true,
+                    repeat: 4,
+                    onComplete: () => {
+                        player.alpha = 1;
+                        player.clearTint();
+                        this.invulnerable = false;
+                    }
+                });
+
+                // Bounce effect
+                player.setVelocityY(-300);
+                player.setVelocityX(-100);
+
+                obstacle.destroy();
+                this.updateLivesDisplay();
+
+                console.log(`Lives remaining: ${this.lives}`);
+
+                if (this.lives <= 0) {
+                    this.gameOver();
+                }
+            }
+
+            collectCoin(player, coin) {
+                // Particle burst
+                const emitter = this.particles.createEmitter({
+                    x: coin.x,
+                    y: coin.y,
+                    speed: { min: 100, max: 200 },
+                    scale: { start: 1.2, end: 0 },
+                    blendMode: 'ADD',
+                    lifespan: 400
+                });
+                emitter.explode(12);
+
+                // Score pop animation
+                const scorePopText = this.add.text(coin.x, coin.y - 30, '+200', {
+                    fontSize: '24px',
+                    fill: '#FFD700',
+                    fontFamily: 'Comic Sans MS',
+                    stroke: '#FFFFFF',
+                    strokeThickness: 3
+                });
+
+                this.tweens.add({
+                    targets: scorePopText,
+                    y: coin.y - 80,
+                    alpha: 0,
+                    scale: 1.5,
+                    duration: 1200,
+                    ease: 'Power2',
+                    onComplete: () => scorePopText.destroy()
+                });
+
+                // Coin collection effect on player
+                this.tweens.add({
+                    targets: player,
+                    scaleX: 1.4,
+                    scaleY: 1.4,
+                    duration: 150,
+                    yoyo: true,
+                    ease: 'Back.easeOut'
+                });
+
+                this.score += 200; // Increased coin value
+                coin.destroy();
+                
+                console.log(`Coin collected! Score: ${this.score}`);
+            }
+
+            increaseDifficulty() {
+                this.gameSpeed += 30;
+                if (this.obstacleTimer.delay > 1000) {
+                    this.obstacleTimer.delay -= 100;
+                }
+                
+                console.log(`Difficulty increased! Speed: ${this.gameSpeed}`);
+            }
+
+            updateLivesDisplay() {
+                const hearts = '♥'.repeat(this.lives);
+                const emptyHearts = '♡'.repeat(3 - this.lives);
+                this.livesText.setText('Lives: ' + hearts + emptyHearts);
+            }
+
+            gameOver() {
+                console.log('Game Over!');
+                
+                // Save high score
+                localStorage.setItem('chibiHighScore', this.highScore);
+                
+                // Stop timers
+                this.obstacleTimer.paused = true;
+                this.coinTimer.paused = true;
+                this.difficultyTimer.paused = true;
+                
+                // Stop physics
+                this.physics.pause();
+                
+                // Update final score text
+                this.finalScoreText.setText(`Final Score: ${this.score}`);
+                
+                // Show game over screen with animation
+                this.gameOverGroup.setVisible(true);
+                this.gameOverGroup.setAlpha(0);
+                this.tweens.add({
+                    targets: this.gameOverGroup.getChildren(),
+                    alpha: 1,
+                    duration: 500,
+                    ease: 'Power2'
+                });
+                
+                // Restart input
+                this.input.off('pointerdown', this.jump, this);
+                this.input.on('pointerdown', this.restartGame, this);
+                
+                // Remove old space key handler and add new one
+                this.spaceKey.off('down');
+                this.spaceKey.on('down', this.restartGame, this);
+            }
+
+            restartGame() {
+                console.log('Restarting game...');
+                this.scene.restart();
+            }
+        }
+
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game',
+            backgroundColor: '#E6E6FA',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 1200 }, // Increased gravity for more responsive jumps
+                    debug: false
+                }
+            },
+            scene: GameScene,
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            }
+        };
+
+        const game = new Phaser.Game(config);
+    </script>
+</body>
+</html>

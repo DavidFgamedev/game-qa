@@ -1,0 +1,16 @@
+{ "games": [
+  { "name": "tiny-pass", "root": "test/fixtures/games/tiny-pass",
+    "entry": "test/fixtures/games/tiny-pass/index.html", "platforms": ["web"],
+    "browser": {
+      "controls": [{ "key": "ArrowRight", "observe": "#score" }],
+      "states": {
+        "win":  { "keys": ["w"], "text": "you win" },
+        "lose": { "keys": ["l"], "text": "you lose" }
+      }
+    }
+  },
+  { "name": "broken-runtime", "root": "test/fixtures/games/broken-runtime",
+    "entry": "test/fixtures/games/broken-runtime/index.html", "platforms": ["web"],
+    "browser": { "controls": [], "states": {} }
+  }
+] }

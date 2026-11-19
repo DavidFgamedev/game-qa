@@ -1,0 +1,23 @@
+{
+  "games": [
+    {
+      "name": "chibi-bounce",
+      "root": "test/fixtures/games/chibi-bounce",
+      "entry": "test/fixtures/games/chibi-bounce/index.html",
+      "platforms": ["ios"],
+      "checks": ["data-uri", "placeholders", "required-elements", "touch-controls"]
+    },
+    {
+      "name": "bird-runner-3d",
+      "root": "test/fixtures/games/bird-runner-3d",
+      "entry": "test/fixtures/games/bird-runner-3d/index.html",
+      "platforms": ["web"]
+    },
+    {
+      "name": "stellar-drift",
+      "root": "test/fixtures/games/stellar-drift",
+      "entry": "test/fixtures/games/stellar-drift/index.html",
+      "platforms": ["web"]
+    }
+  ]
+}

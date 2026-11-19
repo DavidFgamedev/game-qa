@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Drift - 3D Space Runner</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Game Canvas -->
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- UI Overlay -->
+        <div id="ui-overlay">
+            <div id="hud" class="hidden">
+                <div id="score">Score: <span id="score-value">0</span></div>
+                <div id="fuel-container">
+                    <div id="fuel-label">Fuel:</div>
+                    <div id="fuel-bar">
+                        <div id="fuel-fill"></div>
+                    </div>
+                </div>
+                <div id="speed">Speed: <span id="speed-value">1.0x</span></div>
+            </div>
+            
+            <!-- Start Menu -->
+            <div id="start-menu">
+                <h1>Stellar Drift</h1>
+                <p>Navigate through the asteroid field and collect energy crystals!</p>
+                <div class="controls">
+                    <h3>Controls:</h3>
+                    <p>WASD / Arrow Keys / Touch to move</p>
+                    <p>Avoid asteroids • Collect crystals • Manage fuel</p>
+                </div>
+                <button id="start-button">Start Game</button>
+            </div>
+            
+            <!-- Game Over Screen -->
+            <div id="game-over" class="hidden">
+                <h2>Game Over</h2>
+                <div id="final-stats">
+                    <p>Final Score: <span id="final-score">0</span></p>
+                    <p>Crystals Collected: <span id="crystals-collected">0</span></p>
+                    <p>Distance Traveled: <span id="distance-traveled">0</span>m</p>
+                </div>
+                <button id="restart-button">Play Again</button>
+            </div>
+            
+            <!-- Loading Screen -->
+            <div id="loading" class="hidden">
+                <div class="loading-text">Loading...</div>
+                <div class="loading-bar">
+                    <div id="loading-progress"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Controls -->
+        <div id="mobile-controls" class="hidden">
+            <div id="joystick-container">
+                <div id="joystick-outer">
+                    <div id="joystick-inner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/particle-system.js"></script>
+    <script src="js/object-pool.js"></script>
+    <script src="js/collision-detection.js"></script>
+    <script src="js/game-objects.js"></script>
+    <script src="js/input-manager.js"></script>
+    <script src="js/game-state.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

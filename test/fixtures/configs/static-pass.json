@@ -1,0 +1,3 @@
+{ "games": [
+  { "name": "tiny-pass", "root": "test/fixtures/games/tiny-pass", "entry": "test/fixtures/games/tiny-pass/index.html", "platforms": ["web"] }
+] }

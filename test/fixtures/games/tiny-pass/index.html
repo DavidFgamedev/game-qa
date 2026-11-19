@@ -1,0 +1,15 @@
+<!doctype html><html><head><title>Tiny Pass</title></head><body>
+<div id="score">Score: 0</div>
+<div id="result" hidden></div>
+<script>
+  let score = 0;
+  const scoreEl = document.getElementById('score');
+  const result = document.getElementById('result');
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { score += 1; scoreEl.textContent = 'Score: ' + score; }
+    if (e.key === 'w') { result.textContent = 'You win!'; result.hidden = false; }
+    if (e.key === 'l') { result.textContent = 'You lose'; result.hidden = false; }
+  });
+  document.addEventListener('touchstart', () => {}, { passive: true });
+</script>
+</body></html>
